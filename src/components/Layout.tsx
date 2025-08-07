@@ -10,29 +10,32 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const { session } = useAuth();
   const navigate = useNavigate();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [loadingLogo, setLoadingLogo] = useState(true);
+  const [eventName, setEventName] = useState<string>('Lomba Musik');
+  const [loadingSettings, setLoadingSettings] = useState(true);
 
   useEffect(() => {
-    const fetchLogo = async () => {
-      setLoadingLogo(true);
+    const fetchSettings = async () => {
+      setLoadingSettings(true);
       const { data, error } = await supabase
         .from('settings')
-        .select('value')
-        .eq('key', 'logo_url')
-        .single();
+        .select('key, value');
 
-      if (data?.value) {
-        setLogoUrl(data.value);
+      if (error) {
+        console.error('Gagal memuat pengaturan:', error);
+      } else {
+        const settingsMap = new Map(data.map(s => [s.key, s.value]));
+        setLogoUrl(settingsMap.get('logo_url') || null);
+        setEventName(settingsMap.get('event_name') || 'Lomba Musik');
       }
-      setLoadingLogo(false);
+      setLoadingSettings(false);
     };
 
-    fetchLogo();
+    fetchSettings();
     
-    const channel = supabase.channel('settings-logo-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: 'key=eq.logo_url' }, (payload) => {
-        const newRecord = payload.new as { value: string };
-        setLogoUrl(newRecord.value);
+    const channel = supabase.channel('settings-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, 
+      (payload) => {
+        fetchSettings();
       })
       .subscribe();
 
@@ -52,26 +55,31 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-4">
-              {loadingLogo ? (
-                <Skeleton className="h-12 w-12 rounded-full" />
+              {loadingSettings ? (
+                <>
+                  <Skeleton className="h-10 w-10 rounded-md" />
+                  <Skeleton className="h-6 w-32" />
+                </>
               ) : (
-                logoUrl ? <img src={logoUrl} alt="Event Logo" className="h-12" /> : <h1 className="text-xl font-bold">Lomba Musik</h1>
+                <>
+                  {logoUrl && <img src={logoUrl} alt="Event Logo" className="h-12 max-w-32 object-contain" />}
+                  {!logoUrl && <h1 className="text-xl font-bold">{eventName}</h1>}
+                </>
               )}
               <nav className="hidden md:flex items-baseline space-x-4">
                 <Link to="/" className="text-lg font-semibold text-primary hover:text-primary/90">Vote</Link>
                 {session && (
-                  <Link to="/dashboard" className="text-gray-600 hover:text-gray-900">Dashboard</Link>
+                  <>
+                    <Link to="/dashboard" className="text-gray-600 hover:text-gray-900">Dashboard</Link>
+                    <Link to="/admin" className="text-gray-600 hover:text-gray-900">Peserta</Link>
+                    <Link to="/settings" className="text-gray-600 hover:text-gray-900">Pengaturan</Link>
+                  </>
                 )}
               </nav>
             </div>
             <div>
               {session ? (
-                <div className="flex items-center space-x-4">
-                   <Link to="/admin">
-                    <Button variant="ghost">Admin</Button>
-                  </Link>
-                  <Button onClick={handleLogout}>Logout</Button>
-                </div>
+                <Button onClick={handleLogout}>Logout</Button>
               ) : (
                 <Link to="/login">
                   <Button>Admin Login</Button>
