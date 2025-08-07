@@ -57,8 +57,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               ) : (
                 logoUrl ? <img src={logoUrl} alt="Event Logo" className="h-12" /> : <h1 className="text-xl font-bold">Lomba Musik</h1>
               )}
-              <nav className="hidden md:flex space-x-4">
-                <Link to="/" className="text-gray-600 hover:text-gray-900">Vote</Link>
+              <nav className="hidden md:flex items-baseline space-x-4">
+                <Link to="/" className="text-lg font-semibold text-primary hover:text-primary/90">Vote</Link>
                 {session && (
                   <Link to="/dashboard" className="text-gray-600 hover:text-gray-900">Dashboard</Link>
                 )}
