@@ -97,12 +97,20 @@ const Settings = () => {
     const toastId = showLoading('Mereset semua data vote...');
     try {
       const { error } = await supabase.functions.invoke('reset-votes');
-      if (error) throw new Error(error.message);
+      
+      if (error) {
+        // Coba dapatkan pesan error yang lebih spesifik dari konteks respons
+        const errorMessage = (error as any).context?.error || error.message;
+        throw new Error(errorMessage);
+      }
+
       dismissToast(toastId);
       showSuccess('Semua data vote telah berhasil direset menjadi 0.');
     } catch (error) {
       dismissToast(toastId);
-      showError(error instanceof Error ? error.message : 'Gagal mereset data vote.');
+      // Tampilkan pesan error yang lebih informatif kepada pengguna
+      const displayMessage = error instanceof Error ? error.message : 'Gagal mereset data vote.';
+      showError(displayMessage);
     }
   };
 
