@@ -64,8 +64,8 @@ const Dashboard = () => {
 
   const getRankColor = (rank: number) => {
     if (rank === 1) return 'text-yellow-500';
-    if (rank === 2) return 'text-gray-400';
-    if (rank === 3) return 'text-yellow-700';
+    if (rank === 2) return 'text-slate-400';
+    if (rank === 3) return 'text-orange-500';
     return '';
   };
 
@@ -83,49 +83,51 @@ const Dashboard = () => {
             <Skeleton className="h-10 w-full" />
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[100px]">Peringkat</TableHead>
-                <TableHead className="w-[80px]">Foto</TableHead>
-                <TableHead>Nama</TableHead>
-                <TableHead className="text-right">Jumlah Vote</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {participants.length > 0 ? (
-                participants.map((p, index) => (
-                  <TableRow key={p.id}>
-                    <TableCell className={`font-bold text-lg ${getRankColor(index + 1)}`}>
-                      <div className="flex items-center">
-                        {index < 3 && <Crown className="mr-2 h-5 w-5" />}
-                        {index + 1}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <img
-                        src={p.photo_url || '/placeholder.svg'}
-                        alt={p.name}
-                        className="h-12 w-12 rounded-md object-cover"
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="default" className="text-lg">
-                        {p.vote_count}
-                      </Badge>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">Peringkat</TableHead>
+                  <TableHead className="w-[80px]">Foto</TableHead>
+                  <TableHead>Nama</TableHead>
+                  <TableHead className="text-right">Jumlah Vote</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {participants.length > 0 ? (
+                  participants.map((p, index) => (
+                    <TableRow key={p.id} className={index < 3 ? 'bg-secondary' : ''}>
+                      <TableCell className={`font-bold text-lg ${getRankColor(index + 1)}`}>
+                        <div className="flex items-center">
+                          {index < 3 && <Crown className="mr-2 h-5 w-5" style={{ filter: `drop-shadow(0 0 4px currentColor)`}} />}
+                          {index + 1}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <img
+                          src={p.photo_url || '/placeholder.svg'}
+                          alt={p.name}
+                          className="h-12 w-12 rounded-md object-cover"
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{p.name}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="default" className="text-lg">
+                          {p.vote_count}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                      Belum ada vote yang masuk atau belum ada peserta.
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
-                    Belum ada vote yang masuk atau belum ada peserta.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

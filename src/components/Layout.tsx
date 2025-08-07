@@ -52,10 +52,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white shadow-sm">
+    <div className="min-h-screen flex flex-col">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+          <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               {loadingSettings ? (
                 <>
@@ -64,24 +64,24 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 </>
               ) : (
                 <>
-                  {logoUrl && <img src={logoUrl} alt="Event Logo" className="h-12 max-w-32 object-contain" />}
-                  <h1 className="text-xl font-bold">{eventName}</h1>
+                  {logoUrl && <img src={logoUrl} alt="Event Logo" className="h-10 max-w-32 object-contain" />}
+                  <h1 className="text-xl font-bold text-primary">{eventName}</h1>
                 </>
               )}
-              <nav className="hidden md:flex items-baseline space-x-4">
-                <Link to="/" className="text-lg font-semibold text-primary hover:text-primary/90">Vote</Link>
+              <nav className="hidden md:flex items-baseline space-x-1">
+                <Link to="/" className="px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-secondary transition-colors">Vote</Link>
                 {session && (
                   <>
-                    <Link to="/dashboard" className="text-gray-600 hover:text-gray-900">Dashboard</Link>
-                    <Link to="/admin" className="text-gray-600 hover:text-gray-900">Peserta</Link>
-                    <Link to="/settings" className="text-gray-600 hover:text-gray-900">Pengaturan</Link>
+                    <Link to="/dashboard" className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors">Dashboard</Link>
+                    <Link to="/admin" className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors">Peserta</Link>
+                    <Link to="/settings" className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors">Pengaturan</Link>
                   </>
                 )}
               </nav>
             </div>
             <div>
               {session ? (
-                <Button onClick={handleLogout}>Logout</Button>
+                <Button onClick={handleLogout} variant="ghost">Logout</Button>
               ) : (
                 <Link to="/login">
                   <Button>Admin Login</Button>
@@ -94,8 +94,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
         {children}
       </main>
-      <footer className="py-4">
-        {/* Footer content removed */}
+      <footer className="py-4 text-center text-sm text-muted-foreground">
+        Powered by Dyad
       </footer>
     </div>
   );

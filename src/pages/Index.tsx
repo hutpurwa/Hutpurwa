@@ -40,7 +40,6 @@ const Index = () => {
 
     fetchParticipants();
     
-    // Cek apakah user sudah vote di session ini
     if (sessionStorage.getItem('hasVoted_music_contest')) {
       setVoted(true);
     }
@@ -55,30 +54,25 @@ const Index = () => {
     setVotingId(participantId);
 
     try {
-      // 1. Dapatkan sidik jari browser
       const fp = await FingerprintJS.load();
       const result = await fp.get();
       const visitorId = result.visitorId;
 
-      // 2. Panggil Edge Function yang aman
       const { data, error } = await supabase.functions.invoke('vote', {
         body: { participantId, visitorId },
       });
 
       if (error) {
-        // Tangani error spesifik dari function, seperti "sudah vote"
         if (error.context?.body?.error) {
           throw new Error(error.context.body.error);
         }
         throw new Error('Gagal mengirimkan suara. Coba lagi nanti.');
       }
 
-      // Jika berhasil
       showSuccess('Terima kasih! Suara Anda telah dicatat.');
       sessionStorage.setItem('hasVoted_music_contest', 'true');
       setVoted(true);
       
-      // Perbarui vote count secara lokal untuk tampilan instan
       setParticipants(prev => 
         prev.map(p => 
           p.id === participantId ? { ...p, vote_count: p.vote_count + 1 } : p
@@ -87,7 +81,6 @@ const Index = () => {
 
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Terjadi kesalahan yang tidak diketahui.');
-      // Jika errornya karena sudah vote, tandai juga agar tombol disable
       if (err instanceof Error && err.message.includes('sudah pernah memberikan suara')) {
         sessionStorage.setItem('hasVoted_music_contest', 'true');
         setVoted(true);
@@ -100,8 +93,10 @@ const Index = () => {
   return (
     <div>
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">Vote Peserta Favorit Anda</h1>
-        <p className="mt-4 text-xl text-muted-foreground">Anda hanya memiliki satu kesempatan untuk memberikan suara.</p>
+        <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl bg-gradient-to-br from-primary to-slate-600 bg-clip-text text-transparent py-2">
+          Vote Peserta Favorit Anda
+        </h1>
+        <p className="mt-2 text-xl text-muted-foreground">Anda hanya memiliki satu kesempatan untuk memberikan suara.</p>
       </div>
 
       {loading ? (
@@ -110,10 +105,9 @@ const Index = () => {
             <Card key={i}>
               <CardHeader>
                 <Skeleton className="h-8 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
               </CardHeader>
               <CardContent>
-                <Skeleton className="h-40 w-full" />
+                <Skeleton className="aspect-square w-full" />
               </CardContent>
               <CardFooter>
                 <Skeleton className="h-10 w-full" />
@@ -124,7 +118,7 @@ const Index = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {participants.map((p) => (
-            <Card key={p.id} className="flex flex-col">
+            <Card key={p.id} className="flex flex-col transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/10">
               <CardHeader>
                 <CardTitle>{p.name}</CardTitle>
               </CardHeader>
@@ -132,7 +126,7 @@ const Index = () => {
                 <img 
                   src={p.photo_url || '/placeholder.svg'} 
                   alt={p.name} 
-                  className="w-full h-48 object-cover rounded-md mb-4"
+                  className="w-full aspect-square object-cover rounded-md mb-4"
                 />
                 <p className="text-muted-foreground">{p.description}</p>
               </CardContent>
