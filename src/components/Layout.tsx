@@ -9,7 +9,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const { session } = useAuth();
   const navigate = useNavigate();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [eventName, setEventName] = useState<string>('Lomba Musik');
+  const [eventName, setEventName] = useState<string>('Aplikasi Voting');
   const [loadingSettings, setLoadingSettings] = useState(true);
 
   useEffect(() => {
@@ -19,13 +19,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         .from('settings')
         .select('key, value');
 
+      let newEventName = 'Aplikasi Voting';
       if (error) {
         console.error('Gagal memuat pengaturan:', error);
       } else {
         const settingsMap = new Map(data.map(s => [s.key, s.value]));
         setLogoUrl(settingsMap.get('logo_url') || null);
-        setEventName(settingsMap.get('event_name') || 'Lomba Musik');
+        newEventName = settingsMap.get('event_name') || 'Aplikasi Voting';
+        setEventName(newEventName);
       }
+      document.title = newEventName;
       setLoadingSettings(false);
     };
 
