@@ -104,11 +104,9 @@ const Settings = () => {
         if (error instanceof Error) {
             const functionError = (error as any).context;
             if (functionError && typeof functionError.json === 'function') {
-                // This is for older versions of functions-js
                 const errJson = await functionError.json();
                 errorMessage = errJson.error || errJson.message || error.message;
             } else if (functionError && functionError.body) {
-                // For newer versions that might have a readable stream
                 try {
                     const errJson = JSON.parse(functionError.body);
                     errorMessage = errJson.error || errJson.message || error.message;
@@ -196,14 +194,14 @@ const Settings = () => {
           <CardDescription>Tindakan berikut tidak dapat diurungkan. Harap berhati-hati.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex-grow">
               <h3 className="font-semibold">Reset Semua Vote</h3>
               <p className="text-sm text-muted-foreground">Tindakan ini akan mengatur ulang jumlah vote semua peserta menjadi 0.</p>
             </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive">
+                <Button variant="destructive" className="w-full md:w-auto">
                   <AlertTriangle className="mr-2 h-4 w-4" />
                   Reset Vote
                 </Button>

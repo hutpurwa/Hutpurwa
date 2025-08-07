@@ -4,6 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
 import { Skeleton } from './ui/skeleton';
+import { Menu } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { session } = useAuth();
@@ -11,6 +13,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [eventName, setEventName] = useState<string>('Aplikasi Voting');
   const [loadingSettings, setLoadingSettings] = useState(true);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -36,7 +39,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     
     const channel = supabase.channel('settings-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, 
-      (payload) => {
+      () => {
         fetchSettings();
       })
       .subscribe();
@@ -51,6 +54,19 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     navigate('/');
   };
 
+  const NavLinks = ({ isMobile = false }: { isMobile?: boolean }) => (
+    <nav className={isMobile ? "flex flex-col space-y-2 mt-4" : "hidden md:flex items-baseline space-x-1"}>
+      <Link to="/" onClick={() => isMobile && setIsSheetOpen(false)} className={isMobile ? "text-lg" : "px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-secondary transition-colors"}>Vote</Link>
+      {session && (
+        <>
+          <Link to="/dashboard" onClick={() => isMobile && setIsSheetOpen(false)} className={isMobile ? "text-lg text-muted-foreground" : "px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors"}>Dashboard</Link>
+          <Link to="/admin" onClick={() => isMobile && setIsSheetOpen(false)} className={isMobile ? "text-lg text-muted-foreground" : "px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors"}>Peserta</Link>
+          <Link to="/settings" onClick={() => isMobile && setIsSheetOpen(false)} className={isMobile ? "text-lg text-muted-foreground" : "px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors"}>Pengaturan</Link>
+        </>
+      )}
+    </nav>
+  );
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -63,23 +79,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   <Skeleton className="h-6 w-32" />
                 </>
               ) : (
-                <>
+                <Link to="/" className="flex items-center space-x-3">
                   {logoUrl && <img src={logoUrl} alt="Event Logo" className="h-10 max-w-32 object-contain" />}
-                  <h1 className="text-xl font-bold text-primary">{eventName}</h1>
-                </>
+                  <h1 className="text-xl font-bold text-primary hidden sm:block">{eventName}</h1>
+                </Link>
               )}
-              <nav className="hidden md:flex items-baseline space-x-1">
-                <Link to="/" className="px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-secondary transition-colors">Vote</Link>
-                {session && (
-                  <>
-                    <Link to="/dashboard" className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors">Dashboard</Link>
-                    <Link to="/admin" className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors">Peserta</Link>
-                    <Link to="/settings" className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors">Pengaturan</Link>
-                  </>
-                )}
-              </nav>
+              <NavLinks />
             </div>
-            <div>
+            <div className="flex items-center gap-2">
               {session ? (
                 <Button onClick={handleLogout} variant="ghost">Logout</Button>
               ) : (
@@ -87,6 +94,19 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   <Button>Admin Login</Button>
                 </Link>
               )}
+              <div className="md:hidden">
+                <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="icon">
+                      <Menu className="h-6 w-6" />
+                      <span className="sr-only">Buka menu navigasi</span>
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left">
+                    <NavLinks isMobile={true} />
+                  </SheetContent>
+                </Sheet>
+              </div>
             </div>
           </div>
         </div>

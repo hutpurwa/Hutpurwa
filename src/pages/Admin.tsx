@@ -77,43 +77,32 @@ const Admin = () => {
   const handleDelete = async (participant: Participant) => {
     const toastId = showLoading('Menghapus peserta...');
     try {
-      // Hapus foto dari storage jika ada
       if (participant.photo_url) {
         const fileName = participant.photo_url.split('/').pop();
         if (fileName) {
-          const { error: storageError } = await supabase.storage
-            .from('participant-photos')
-            .remove([`public/${fileName}`]);
-          if (storageError) {
-            // Tetap lanjutkan meski foto gagal dihapus, tapi catat errornya
-            console.error('Gagal menghapus foto:', storageError.message);
-            showError(`Gagal menghapus file foto: ${storageError.message}`);
-          }
+          await supabase.storage.from('participant-photos').remove([`public/${fileName}`]);
         }
       }
-
-      // Hapus data dari tabel
-      const { error: dbError } = await supabase
-        .from('participants')
-        .delete()
-        .eq('id', participant.id);
-
-      if (dbError) {
-        throw new Error(dbError.message);
-      }
-
+      const { error: dbError } = await supabase.from('participants').delete().eq('id', participant.id);
+      if (dbError) throw new Error(dbError.message);
       dismissToast(toastId);
       showSuccess('Peserta berhasil dihapus.');
-      // fetchParticipants() akan dipanggil oleh listener realtime
     } catch (error) {
       dismissToast(toastId);
       showError(error instanceof Error ? error.message : 'Gagal menghapus peserta.');
     }
   };
 
+  const NoParticipants = () => (
+    <div className="text-center py-16">
+      <h2 className="text-2xl font-semibold">Belum Ada Peserta</h2>
+      <p className="text-muted-foreground mt-2">Silakan tambahkan peserta baru.</p>
+    </div>
+  );
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <CardTitle>Manajemen Peserta</CardTitle>
           <CardDescription>Tambah, lihat, dan kelola peserta lomba.</CardDescription>
@@ -128,66 +117,82 @@ const Admin = () => {
             <Skeleton className="h-10 w-full" />
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[80px]">Foto</TableHead>
-                <TableHead className="w-[150px]">No. Peserta</TableHead>
-                <TableHead>Nama</TableHead>
-                <TableHead className="text-right">Jumlah Vote</TableHead>
-                <TableHead className="w-[100px] text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {participants.length > 0 ? (
-                participants.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell>
-                      <img
-                        src={p.photo_url || '/placeholder.svg'}
-                        alt={p.name}
-                        className="h-12 w-12 rounded-md object-cover"
-                      />
-                    </TableCell>
-                    <TableCell>{p.participant_number || '-'}</TableCell>
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="secondary">{p.vote_count}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tindakan ini akan menghapus peserta bernama <strong>{p.name}</strong> secara permanen. Data yang sudah dihapus tidak dapat dikembalikan.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(p)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                              Ya, Hapus
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    Belum ada peserta. Silakan tambahkan peserta baru.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <>
+            {participants.length === 0 ? <NoParticipants /> : (
+              <>
+                {/* Mobile View */}
+                <div className="md:hidden space-y-4">
+                  {participants.map((p) => (
+                    <Card key={p.id} className="p-4">
+                      <div className="flex items-start gap-4">
+                        <img src={p.photo_url || '/placeholder.svg'} alt={p.name} className="h-20 w-20 rounded-md object-cover" />
+                        <div className="flex-grow">
+                          <p className="font-bold">{p.name}</p>
+                          <p className="text-sm text-muted-foreground">No: {p.participant_number || '-'}</p>
+                          <p className="text-sm text-muted-foreground">Votes: <Badge variant="secondary">{p.vote_count}</Badge></p>
+                        </div>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="icon"><Trash2 className="h-4 w-4" /></Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
+                              <AlertDialogDescription>Tindakan ini akan menghapus <strong>{p.name}</strong> secara permanen.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(p)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Ya, Hapus</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Desktop View */}
+                <Table className="hidden md:table">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[80px]">Foto</TableHead>
+                      <TableHead className="w-[150px]">No. Peserta</TableHead>
+                      <TableHead>Nama</TableHead>
+                      <TableHead className="text-right">Jumlah Vote</TableHead>
+                      <TableHead className="w-[100px] text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {participants.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell><img src={p.photo_url || '/placeholder.svg'} alt={p.name} className="h-12 w-12 rounded-md object-cover" /></TableCell>
+                        <TableCell>{p.participant_number || '-'}</TableCell>
+                        <TableCell className="font-medium">{p.name}</TableCell>
+                        <TableCell className="text-right"><Badge variant="secondary">{p.vote_count}</Badge></TableCell>
+                        <TableCell className="text-right">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="icon"><Trash2 className="h-4 w-4" /></Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
+                                <AlertDialogDescription>Tindakan ini akan menghapus <strong>{p.name}</strong> secara permanen.</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(p)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Ya, Hapus</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
