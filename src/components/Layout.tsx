@@ -1,15 +1,15 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
 import { Skeleton } from './ui/skeleton';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { showError, showSuccess } from '@/utils/toast';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { session } = useAuth();
-  const navigate = useNavigate();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [eventName, setEventName] = useState<string>('Aplikasi Voting');
   const [loadingSettings, setLoadingSettings] = useState(true);
@@ -50,10 +50,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    // Force a full page reload to ensure all state is cleared and re-initialized.
-    // This is more reliable for ensuring the UI updates correctly after logout.
-    window.location.href = '/';
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      showError(`Logout gagal: ${error.message}`);
+    } else {
+      // We don't show a success toast because the page will reload immediately.
+      // The reload is the most reliable way to clear all state.
+      window.location.reload();
+    }
   };
 
   const NavLinks = ({ isMobile = false }: { isMobile?: boolean }) => (
