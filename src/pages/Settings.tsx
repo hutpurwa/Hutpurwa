@@ -9,6 +9,18 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle } from "lucide-react";
 
 const formSchema = z.object({
   event_name: z.string().min(1, { message: 'Nama acara tidak boleh kosong.' }),
@@ -47,7 +59,6 @@ const Settings = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const toastId = showLoading('Menyimpan pengaturan...');
     try {
-      // Upsert event name
       const { error: nameError } = await supabase.from('settings').upsert({
         key: 'event_name',
         value: values.event_name,
@@ -55,23 +66,16 @@ const Settings = () => {
 
       if (nameError) throw nameError;
 
-      // Handle logo upload if a new one is provided
       const logoFile = values.logo?.[0];
       if (logoFile) {
         const fileName = `logo-${Date.now()}`;
         const { error: uploadError } = await supabase.storage
           .from('event-assets')
-          .upload(fileName, logoFile, {
-            cacheControl: '3600',
-            upsert: true,
-          });
+          .upload(fileName, logoFile, { cacheControl: '3600', upsert: true });
         
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage
-          .from('event-assets')
-          .getPublicUrl(fileName);
-
+        const { data: urlData } = supabase.storage.from('event-assets').getPublicUrl(fileName);
         const { error: logoUrlError } = await supabase.from('settings').upsert({
           key: 'logo_url',
           value: urlData.publicUrl,
@@ -89,67 +93,115 @@ const Settings = () => {
     }
   };
 
+  const handleResetVotes = async () => {
+    const toastId = showLoading('Mereset semua data vote...');
+    try {
+      const { error } = await supabase.functions.invoke('reset-votes');
+      if (error) throw new Error(error.message);
+      dismissToast(toastId);
+      showSuccess('Semua data vote telah berhasil direset menjadi 0.');
+    } catch (error) {
+      dismissToast(toastId);
+      showError(error instanceof Error ? error.message : 'Gagal mereset data vote.');
+    }
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Pengaturan Acara</CardTitle>
-        <CardDescription>Ubah nama acara dan unggah logo di sini. Perubahan akan langsung terlihat di seluruh situs.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="space-y-6">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-24 w-24" />
-            <Skeleton className="h-10 w-32" />
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Pengaturan Acara</CardTitle>
+          <CardDescription>Ubah nama acara dan unggah logo di sini.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-6">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-24 w-24" />
+              <Skeleton className="h-10 w-32" />
+            </div>
+          ) : (
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="event_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nama Acara</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Contoh: Lomba Musik Kemerdekaan" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="logo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Logo Acara (Opsional)</FormLabel>
+                      <FormControl>
+                        <Input type="file" accept="image/png, image/jpeg, image/svg+xml" onChange={(e) => field.onChange(e.target.files)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {currentLogoUrl && (
+                  <div>
+                    <FormLabel>Logo Saat Ini</FormLabel>
+                    <img src={currentLogoUrl} alt="Logo saat ini" className="mt-2 h-20 w-auto rounded-md border bg-slate-50 p-2" />
+                  </div>
+                )}
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </Button>
+              </form>
+            </Form>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-8 border-destructive">
+        <CardHeader>
+          <CardTitle className="text-destructive">Zona Berbahaya</CardTitle>
+          <CardDescription>Tindakan berikut tidak dapat diurungkan. Harap berhati-hati.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold">Reset Semua Vote</h3>
+              <p className="text-sm text-muted-foreground">Tindakan ini akan mengatur ulang jumlah vote semua peserta menjadi 0.</p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  <AlertTriangle className="mr-2 h-4 w-4" />
+                  Reset Vote
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tindakan ini tidak dapat dibatalkan. Ini akan menghapus semua catatan voting dan mereset jumlah vote semua peserta menjadi 0.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleResetVotes} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Ya, Reset Sekarang
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
-        ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="event_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nama Acara</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Contoh: Lomba Musik Kemerdekaan" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="logo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Logo Acara (Opsional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="file"
-                        accept="image/png, image/jpeg, image/svg+xml"
-                        onChange={(e) => field.onChange(e.target.files)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {currentLogoUrl && (
-                <div>
-                  <FormLabel>Logo Saat Ini</FormLabel>
-                  <img src={currentLogoUrl} alt="Logo saat ini" className="mt-2 h-20 w-auto rounded-md border bg-slate-50 p-2" />
-                </div>
-              )}
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan'}
-              </Button>
-            </form>
-          </Form>
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </>
   );
 };
 

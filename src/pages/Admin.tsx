@@ -27,7 +27,7 @@ const Admin = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchParticipants = async () => {
-    setLoading(true);
+    // Tidak set loading ke true di sini agar update real-time tidak berkedip
     const { data, error } = await supabase
       .from('participants')
       .select('*')
@@ -39,11 +39,27 @@ const Admin = () => {
     } else {
       setParticipants(data);
     }
-    setLoading(false);
+    setLoading(false); // Hanya set loading false setelah fetch pertama kali
   };
 
   useEffect(() => {
+    setLoading(true);
     fetchParticipants();
+
+    const channel = supabase
+      .channel('realtime-participants-admin')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'participants' },
+        () => {
+          fetchParticipants();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return (
