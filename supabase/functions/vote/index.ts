@@ -1,5 +1,11 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+
+// Mendefinisikan header CORS langsung di dalam fungsi
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 // Inisialisasi Supabase client dengan service_role key untuk hak akses penuh
 const supabaseAdmin = createClient(
@@ -30,7 +36,7 @@ serve(async (req) => {
       .eq('visitor_id', visitorId)
       .single();
 
-    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = row not found, which is good
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = baris tidak ditemukan, itu bagus
       throw checkError;
     }
 
@@ -42,7 +48,6 @@ serve(async (req) => {
     }
 
     // 2. Jika belum, jalankan fungsi database untuk menambah vote dan mencatatnya
-    // Menggunakan RPC (Remote Procedure Call) untuk transaksi atomik
     const { error: rpcError } = await supabaseAdmin.rpc('increment_vote_and_log', {
       p_participant_id: participantId,
       p_visitor_id: visitorId
