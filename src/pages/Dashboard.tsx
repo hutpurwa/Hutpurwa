@@ -102,7 +102,8 @@ const Dashboard = () => {
                         <img src={p.photo_url || '/placeholder.svg'} alt={p.name} className="h-16 w-16 rounded-md object-cover" />
                         <div className="flex-grow">
                           <p className="font-bold">{p.name}</p>
-                          <Badge variant="default" className="text-md">{p.vote_count} Votes</Badge>
+                          <p className="text-sm text-muted-foreground">No. {p.participant_number || '-'}</p>
+                          <Badge variant="default" className="text-md mt-1">{p.vote_count} Votes</Badge>
                         </div>
                       </div>
                     </Card>
@@ -116,6 +117,7 @@ const Dashboard = () => {
                       <TableRow>
                         <TableHead className="w-[100px]">Peringkat</TableHead>
                         <TableHead className="w-[80px]">Foto</TableHead>
+                        <TableHead>No. Peserta</TableHead>
                         <TableHead>Nama</TableHead>
                         <TableHead className="text-right">Jumlah Vote</TableHead>
                       </TableRow>
@@ -130,6 +132,7 @@ const Dashboard = () => {
                             </div>
                           </TableCell>
                           <TableCell><img src={p.photo_url || '/placeholder.svg'} alt={p.name} className="h-12 w-12 rounded-md object-cover" /></TableCell>
+                          <TableCell>{p.participant_number || '-'}</TableCell>
                           <TableCell className="font-medium">{p.name}</TableCell>
                           <TableCell className="text-right"><Badge variant="default" className="text-lg">{p.vote_count}</Badge></TableCell>
                         </TableRow>
