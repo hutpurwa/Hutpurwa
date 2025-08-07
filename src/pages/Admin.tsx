@@ -10,9 +10,22 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { showError } from '@/utils/toast';
+import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { AddParticipantDialog } from '@/components/AddParticipantDialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type Participant = {
   id: string;
@@ -27,7 +40,6 @@ const Admin = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchParticipants = async () => {
-    // Tidak set loading ke true di sini agar update real-time tidak berkedip
     const { data, error } = await supabase
       .from('participants')
       .select('*')
@@ -39,7 +51,7 @@ const Admin = () => {
     } else {
       setParticipants(data);
     }
-    setLoading(false); // Hanya set loading false setelah fetch pertama kali
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -61,6 +73,43 @@ const Admin = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const handleDelete = async (participant: Participant) => {
+    const toastId = showLoading('Menghapus peserta...');
+    try {
+      // Hapus foto dari storage jika ada
+      if (participant.photo_url) {
+        const fileName = participant.photo_url.split('/').pop();
+        if (fileName) {
+          const { error: storageError } = await supabase.storage
+            .from('participant-photos')
+            .remove([`public/${fileName}`]);
+          if (storageError) {
+            // Tetap lanjutkan meski foto gagal dihapus, tapi catat errornya
+            console.error('Gagal menghapus foto:', storageError.message);
+            showError(`Gagal menghapus file foto: ${storageError.message}`);
+          }
+        }
+      }
+
+      // Hapus data dari tabel
+      const { error: dbError } = await supabase
+        .from('participants')
+        .delete()
+        .eq('id', participant.id);
+
+      if (dbError) {
+        throw new Error(dbError.message);
+      }
+
+      dismissToast(toastId);
+      showSuccess('Peserta berhasil dihapus.');
+      // fetchParticipants() akan dipanggil oleh listener realtime
+    } catch (error) {
+      dismissToast(toastId);
+      showError(error instanceof Error ? error.message : 'Gagal menghapus peserta.');
+    }
+  };
 
   return (
     <Card>
@@ -86,6 +135,7 @@ const Admin = () => {
                 <TableHead className="w-[150px]">No. Peserta</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead className="text-right">Jumlah Vote</TableHead>
+                <TableHead className="w-[100px] text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -104,11 +154,34 @@ const Admin = () => {
                     <TableCell className="text-right">
                       <Badge variant="secondary">{p.vote_count}</Badge>
                     </TableCell>
+                    <TableCell className="text-right">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tindakan ini akan menghapus peserta bernama <strong>{p.name}</strong> secara permanen. Data yang sudah dihapus tidak dapat dikembalikan.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(p)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Ya, Hapus
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell colSpan={5} className="h-24 text-center">
                     Belum ada peserta. Silakan tambahkan peserta baru.
                   </TableCell>
                 </TableRow>
