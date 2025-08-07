@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { showError, showSuccess } from '@/utils/toast';
 import { ThumbsUp } from 'lucide-react';
+import FingerprintJS from '@fingerprintjs/fingerprintjs';
 
 type Participant = {
   id: string;
@@ -38,9 +39,9 @@ const Index = () => {
     };
 
     fetchParticipants();
-
-    const hasVoted = localStorage.getItem('hasVoted_music_contest');
-    if (hasVoted) {
+    
+    // Cek apakah user sudah vote di session ini
+    if (sessionStorage.getItem('hasVoted_music_contest')) {
       setVoted(true);
     }
   }, []);
@@ -53,23 +54,47 @@ const Index = () => {
     
     setVotingId(participantId);
 
-    // In a real app, this should call a secure Edge Function
-    // For simplicity, we'll do a direct RPC call to a database function
-    // Let's create that function first.
-    // For now, this will be a placeholder.
-    
-    // Placeholder logic
-    console.log(`Voting for ${participantId}`);
-    
-    // This part will be implemented in the next step with an Edge Function
-    // For now, we just simulate the vote.
-    setTimeout(() => {
-      localStorage.setItem('hasVoted_music_contest', 'true');
-      setVoted(true);
+    try {
+      // 1. Dapatkan sidik jari browser
+      const fp = await FingerprintJS.load();
+      const result = await fp.get();
+      const visitorId = result.visitorId;
+
+      // 2. Panggil Edge Function yang aman
+      const { data, error } = await supabase.functions.invoke('vote', {
+        body: { participantId, visitorId },
+      });
+
+      if (error) {
+        // Tangani error spesifik dari function, seperti "sudah vote"
+        if (error.context?.body?.error) {
+          throw new Error(error.context.body.error);
+        }
+        throw new Error('Gagal mengirimkan suara. Coba lagi nanti.');
+      }
+
+      // Jika berhasil
       showSuccess('Terima kasih! Suara Anda telah dicatat.');
+      sessionStorage.setItem('hasVoted_music_contest', 'true');
+      setVoted(true);
+      
+      // Perbarui vote count secara lokal untuk tampilan instan
+      setParticipants(prev => 
+        prev.map(p => 
+          p.id === participantId ? { ...p, vote_count: p.vote_count + 1 } : p
+        )
+      );
+
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Terjadi kesalahan yang tidak diketahui.');
+      // Jika errornya karena sudah vote, tandai juga agar tombol disable
+      if (err instanceof Error && err.message.includes('sudah pernah memberikan suara')) {
+        sessionStorage.setItem('hasVoted_music_contest', 'true');
+        setVoted(true);
+      }
+    } finally {
       setVotingId(null);
-      // We would also update the local state for vote_count here
-    }, 1000);
+    }
   };
 
   return (
@@ -117,7 +142,7 @@ const Index = () => {
                   onClick={() => handleVote(p.id)} 
                   disabled={voted || !!votingId}
                 >
-                  {votingId === p.id ? 'Voting...' : (
+                  {votingId === p.id ? 'Memproses...' : (
                     <>
                       <ThumbsUp className="mr-2 h-4 w-4" /> Vote
                     </>
