@@ -59,7 +59,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               )}
               <nav className="hidden md:flex space-x-4">
                 <Link to="/" className="text-gray-600 hover:text-gray-900">Vote</Link>
-                <Link to="/dashboard" className="text-gray-600 hover:text-gray-900">Dashboard</Link>
+                {session && (
+                  <Link to="/dashboard" className="text-gray-600 hover:text-gray-900">Dashboard</Link>
+                )}
               </nav>
             </div>
             <div>
