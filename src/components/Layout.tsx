@@ -62,7 +62,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               ) : (
                 <>
                   {logoUrl && <img src={logoUrl} alt="Event Logo" className="h-12 max-w-32 object-contain" />}
-                  {!logoUrl && <h1 className="text-xl font-bold">{eventName}</h1>}
+                  <h1 className="text-xl font-bold">{eventName}</h1>
                 </>
               )}
               <nav className="hidden md:flex items-baseline space-x-4">
