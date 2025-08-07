@@ -63,10 +63,19 @@ const Index = () => {
       });
 
       if (error) {
+        console.error('Vote function error:', error);
+        // Coba ekstrak pesan error yang lebih spesifik dari respons fungsi
+        let detailedError = 'Gagal mengirimkan suara. Coba lagi nanti.';
         if (error.context?.body?.error) {
-          throw new Error(error.context.body.error);
+          detailedError = error.context.body.error;
+        } else if (error.context?.body) {
+            try {
+                // Beberapa error mungkin ada di dalam body sebagai JSON string
+                const body = JSON.parse(error.context.body);
+                detailedError = body.error || body.message || detailedError;
+            } catch {}
         }
-        throw new Error('Gagal mengirimkan suara. Coba lagi nanti.');
+        throw new Error(detailedError);
       }
 
       showSuccess('Terima kasih! Suara Anda telah dicatat.');
