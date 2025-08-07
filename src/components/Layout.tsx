@@ -51,7 +51,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('/');
+    // Force a full page reload to ensure all state is cleared and re-initialized.
+    // This is more reliable for ensuring the UI updates correctly after logout.
+    window.location.href = '/';
   };
 
   const NavLinks = ({ isMobile = false }: { isMobile?: boolean }) => (
