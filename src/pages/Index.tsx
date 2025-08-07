@@ -6,6 +6,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { showError, showSuccess } from '@/utils/toast';
 import { ThumbsUp } from 'lucide-react';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Participant = {
   id: string;
@@ -20,6 +30,8 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [voted, setVoted] = useState(false);
   const [votingId, setVotingId] = useState<string | null>(null);
+  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchParticipants = async () => {
@@ -58,19 +70,16 @@ const Index = () => {
       const result = await fp.get();
       const visitorId = result.visitorId;
 
-      const { data, error } = await supabase.functions.invoke('vote', {
+      const { error } = await supabase.functions.invoke('vote', {
         body: { participantId, visitorId },
       });
 
       if (error) {
-        console.error('Vote function error:', error);
-        // Coba ekstrak pesan error yang lebih spesifik dari respons fungsi
         let detailedError = 'Gagal mengirimkan suara. Coba lagi nanti.';
         if (error.context?.body?.error) {
           detailedError = error.context.body.error;
         } else if (error.context?.body) {
             try {
-                // Beberapa error mungkin ada di dalam body sebagai JSON string
                 const body = JSON.parse(error.context.body);
                 detailedError = body.error || body.message || detailedError;
             } catch {}
@@ -96,7 +105,15 @@ const Index = () => {
       }
     } finally {
       setVotingId(null);
+      setIsDialogOpen(false);
+      setSelectedParticipant(null);
     }
+  };
+
+  const openConfirmationDialog = (participant: Participant) => {
+    if (voted || votingId) return;
+    setSelectedParticipant(participant);
+    setIsDialogOpen(true);
   };
 
   return (
@@ -142,14 +159,10 @@ const Index = () => {
               <CardFooter>
                 <Button 
                   className="w-full" 
-                  onClick={() => handleVote(p.id)} 
+                  onClick={() => openConfirmationDialog(p)} 
                   disabled={voted || !!votingId}
                 >
-                  {votingId === p.id ? 'Memproses...' : (
-                    <>
-                      <ThumbsUp className="mr-2 h-4 w-4" /> Vote
-                    </>
-                  )}
+                  <ThumbsUp className="mr-2 h-4 w-4" /> Vote
                 </Button>
               </CardFooter>
             </Card>
@@ -162,6 +175,30 @@ const Index = () => {
           <p className="text-muted-foreground mt-2">Admin perlu menambahkan data peserta terlebih dahulu.</p>
         </div>
       )}
+
+      <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Vote</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin memberikan suara untuk <strong>{selectedParticipant?.name}</strong>? Anda tidak dapat mengubah pilihan Anda setelah ini.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedParticipant(null)}>Batal</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (selectedParticipant) {
+                  handleVote(selectedParticipant.id);
+                }
+              }}
+              disabled={!!votingId}
+            >
+              {votingId ? 'Memproses...' : 'Ya, Vote Sekarang'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
