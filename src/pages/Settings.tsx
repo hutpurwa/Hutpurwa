@@ -96,20 +96,37 @@ const Settings = () => {
   const handleResetVotes = async () => {
     const toastId = showLoading('Mereset semua data vote...');
     try {
-      const { error } = await supabase.functions.invoke('reset-votes');
-      
+      const { data, error } = await supabase.functions.invoke('reset-votes');
+
       if (error) {
-        // Coba dapatkan pesan error yang lebih spesifik dari konteks respons
-        const errorMessage = (error as any).context?.error || error.message;
+        console.error('Error invoking reset-votes function:', error);
+        let errorMessage = 'Gagal mereset data vote.';
+        if (error instanceof Error) {
+            const functionError = (error as any).context;
+            if (functionError && typeof functionError.json === 'function') {
+                // This is for older versions of functions-js
+                const errJson = await functionError.json();
+                errorMessage = errJson.error || errJson.message || error.message;
+            } else if (functionError && functionError.body) {
+                // For newer versions that might have a readable stream
+                try {
+                    const errJson = JSON.parse(functionError.body);
+                    errorMessage = errJson.error || errJson.message || error.message;
+                } catch {
+                    errorMessage = error.message;
+                }
+            } else {
+                errorMessage = error.message;
+            }
+        }
         throw new Error(errorMessage);
       }
 
       dismissToast(toastId);
-      showSuccess('Semua data vote telah berhasil direset menjadi 0.');
+      showSuccess(data.message || 'Semua data vote telah berhasil direset menjadi 0.');
     } catch (error) {
       dismissToast(toastId);
-      // Tampilkan pesan error yang lebih informatif kepada pengguna
-      const displayMessage = error instanceof Error ? error.message : 'Gagal mereset data vote.';
+      const displayMessage = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui.';
       showError(displayMessage);
     }
   };

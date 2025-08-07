@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
 import { Skeleton } from './ui/skeleton';
-import { MadeWithDyad } from './made-with-dyad';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { session } = useAuth();
@@ -93,7 +92,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         {children}
       </main>
       <footer className="py-4">
-        <MadeWithDyad />
+        {/* Footer content removed */}
       </footer>
     </div>
   );
